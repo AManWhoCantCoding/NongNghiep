@@ -5332,7 +5332,7 @@ render();
   const todaySection=(role)=>`${section('Việc hôm nay',role==='driver'?'tripList':role==='buyer'?'collectionHome':role==='qc'?'qcQueue':role==='warehouse'?'warehouseHome':'myTasks')}<div class="v2616-task-list">${todayItems(role).slice(0,3).map(taskCard).join('')}</div><div class="v2616-open-all"><button class="btn secondary block" onclick="go('${role==='driver'?'tripList':role==='buyer'?'collectionHome':role==='qc'?'qcQueue':role==='warehouse'?'warehouseHome':'myTasks'}')">Mở tất cả công việc</button></div>`;
   const quicks=(role)=>{
     if(role==='worker') return `${q('diaryCreate','diary','Ghi nhật ký')}${q('myTasks','clipboard','Việc hôm nay')}${q('plotDetail','plot','Hồ sơ lô')}${allBtn()}`;
-    if(role==='leader') return `${q('harvestList','harvest','Thu hoạch')}${q('myTasks','clipboard','Việc hôm nay')}${q('attendanceScan','check','Chấm công hộ')}${allBtn()}`;
+    if(role==='leader') return `${q('harvestList','harvest','Thu hoạch')}${q('assignment','clipboard','Phân công')}${q('myTasks','clipboard','Việc hôm nay')}${allBtn()}`;
     if(role==='agronomist') return `${q('diaryApproval','check','Cần duyệt')}${q('myTasks','clipboard','Việc hôm nay')}${q('plots','plot','Hồ sơ lô')}${allBtn()}`;
     if(role==='manager') return `${q('managerOps','check','Điều hành')}${q('myTasks','clipboard','Tiến độ tổ')}${q('harvestList','harvest','Thu hoạch')}${allBtn()}`;
     if(role==='buyer') return `${q('collectionHome','harvest','Điểm gom')}${q('rawBatch','box','Lô nguyên liệu')}${q('plotDetail','plot','Hồ sơ lô')}${allBtn()}`;
@@ -11521,11 +11521,90 @@ html,body,button,input,select,textarea{font-family:var(--font-ui)!important}
 .phone-screen.ag-dark-theme .ag-status-card--done{background:#183728!important;border-color:#38684D!important;color:#9BE4B8!important;}
 </style>
 
-<script type="application/json" id="vb-role-manifest">{"role": "leader", "sector": "Trồng trọt", "label": "Tổ trưởng", "baseline": "AgriOS v26.57", "sourceSha256": "47454dc1f81464355fff8644c485f6a9eddecf7d07d04daef59c2079a5ffff50", "baselineCount": 39, "baselineScreens": ["splash", "login", "today", "myTasks", "taskDetail", "plots", "plotDetail", "diaryList", "diaryDetail", "diaryCreate", "harvestList", "harvestCreate", "weighing", "notifications", "sync", "attendance", "account", "diarySaved", "notificationDetail", "syncResult", "help", "helpDetail", "logoutConfirm", "photoCapture", "weighEntry", "harvestHandoff", "harvestQr", "tenantSetup", "plotMap", "allFunctions", "diaryHistory", "weighOpenEdit", "attendanceScan", "harvestOrders", "productivity", "materials", "materialReturn", "isolationBlock", "todayTaskDetail"], "demoRouteCount": 3, "policy": "PO prototype/demo, browser-only"}</script>
+ <style id="pl301-assignment-style">
+ .asgn-intro{margin-bottom:11px}
+ .asgn-eyebrow{color:var(--primary);font-size:10px;font-weight:700;letter-spacing:.07em}
+ .asgn-title{margin:3px 0 4px;font-size:17px;font-weight:700}
+ .asgn-copy{margin:0;color:var(--text-muted);font-size:12px;line-height:1.45}
+ .asgn-job-card{display:grid;gap:11px}
+ .asgn-job-top{display:flex;align-items:flex-start;gap:10px}
+ .asgn-job-name{font-size:14px;font-weight:700;line-height:1.35}
+ .asgn-job-code{margin-top:3px;color:var(--text-muted);font-size:11px}
+ .asgn-job-status{margin-left:auto;flex:0 0 auto}
+ .asgn-job-fields{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+ .asgn-data-field{min-width:0;padding:8px 9px;border-radius:9px;background:var(--bg-page)}
+ .asgn-data-label{color:var(--text-muted);font-size:10px}
+ .asgn-data-value{margin-top:2px;font-size:12px;font-weight:600;overflow-wrap:anywhere}
+ .asgn-assignee{margin-top:12px}
+ .asgn-assignee label{display:block;margin-bottom:6px;font-size:13px;font-weight:700}
+ .asgn-assignee select{width:100%;min-height:44px;padding:0 11px;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg-surface);color:var(--text)}
+ .asgn-team-hint{margin-top:6px;color:var(--text-muted);font-size:11px}
+ .asgn-demo-note{display:flex;gap:8px;align-items:flex-start;margin-top:12px;padding:9px 10px;border:1px solid #C3D9EB;border-radius:9px;background:var(--info-bg);color:var(--info-fg);font-size:11px;line-height:1.45}
+ .asgn-demo-note strong{display:block;margin-bottom:1px;font-size:11px}
+ .asgn-cta{margin-top:10px}
+ .asgn-review-list{display:grid;gap:9px;margin-top:12px}
+ .asgn-review-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--divider);font-size:12px}
+ .asgn-review-row:last-child{border-bottom:0}
+ .asgn-review-row span{color:var(--text-muted)}
+ .asgn-review-row strong{text-align:right}
+ </style>
+ <script id="pl301-assignment-screens">
+ (function(){
+   const members=[
+     {id:'hoa',name:'Trần Thị Hoa',code:'NV-0031'},
+     {id:'hai',name:'Võ Văn Hải',code:'NV-0045'},
+     {id:'lan',name:'Nguyễn Thị Lan',code:'NV-0052'},
+     {id:'tai',name:'Đỗ Văn Tài'},
+     {id:'loc',name:'Phạm Văn Lộc'},
+     {id:'son',name:'Phạm Văn Sơn'}
+   ];
+   const order={id:'WO-2026-1017',work:'Phun phòng rầy xanh',plot:'C06',crop:'Chè',area:'Lộc Quảng',due:'12/10/2026'};
+   const demoState=()=>state.assignmentDemo||(state.assignmentDemo={assigneeId:'',submitted:false});
+   const assignee=()=>members.find(member=>member.id===demoState().assigneeId);
+   const jobCard=()=>`<div class="card asgn-job-card">
+     <div class="asgn-job-top"><div class="icon-tile">${icon('clipboard')}</div><div class="grow"><div class="asgn-job-name">${order.work}</div><div class="asgn-job-code mono">${order.id}</div></div><span class="pill warn asgn-job-status">Chưa giao</span></div>
+     <div class="asgn-job-fields">
+       <div class="asgn-data-field"><div class="asgn-data-label">Lô sản xuất</div><div class="asgn-data-value mono">${order.plot}</div></div>
+       <div class="asgn-data-field"><div class="asgn-data-label">Cây trồng</div><div class="asgn-data-value">${order.crop}</div></div>
+       <div class="asgn-data-field"><div class="asgn-data-label">Vùng trồng</div><div class="asgn-data-value">${order.area}</div></div>
+       <div class="asgn-data-field"><div class="asgn-data-label">Hạn hoàn thành</div><div class="asgn-data-value mono">${order.due}</div></div>
+     </div>
+   </div>`;
+   window.setAssignmentAssignee=function(id){demoState().assigneeId=id;render();};
+   window.reviewAssignment=function(){if(!assignee())return;go('assignmentReview');};
+   window.confirmAssignment=function(){const selected=assignee();if(!selected)return;demoState().submitted=true;go('assignmentDone');};
+
+   screens.assignment=function(){
+     const selected=demoState().assigneeId;
+     return appShell(`<div class="asgn-intro"><div class="asgn-eyebrow">LỆNH CÔNG VIỆC · TỔ 2</div><div class="asgn-title">Chọn người thực hiện</div><p class="asgn-copy">Giao lệnh theo đúng lô và hạn của công việc trồng trọt.</p></div>
+       ${jobCard()}
+       <div class="asgn-assignee"><label for="assignmentAssignee">Người thực hiện</label><select id="assignmentAssignee" onchange="setAssignmentAssignee(this.value)"><option value="">Chọn thành viên Tổ 2</option>${members.map(member=>`<option value="${member.id}" ${selected===member.id?'selected':''}>${member.name}${member.code?` · ${member.code}`:''}</option>`).join('')}</select><div class="asgn-team-hint">Chỉ chọn thành viên trong tổ phụ trách.</div></div>
+       <div class="asgn-demo-note"><span>${icon('sync')}</span><div><strong>Dữ liệu mẫu</strong>Phân công chỉ mô phỏng trong bộ nhớ; chưa gửi thông báo hay ghi lên hệ thống.</div></div>
+       <button class="btn primary block asgn-cta" ${selected?'':'disabled'} onclick="reviewAssignment()">Rà soát phân công</button>`,{title:'Phân công nhanh'});
+   };
+   screens.assignmentReview=function(){
+     const selected=assignee();
+     if(!selected)return appShell(`<div class="empty-state compact"><div class="card-title">Chưa chọn người thực hiện</div><button class="btn secondary block" style="margin-top:12px" onclick="goBack()">Quay lại</button></div>`,{title:'Kiểm tra phân công'});
+     return appShell(`<div class="asgn-intro"><div class="asgn-eyebrow">KIỂM TRA TRƯỚC KHI GIAO</div><div class="asgn-title">Xác nhận thông tin</div><p class="asgn-copy">Kiểm tra công việc, lô và người nhận trước khi hoàn tất.</p></div>
+       ${jobCard()}
+       <div class="card asgn-review-list"><div class="asgn-review-row"><span>Tổ thực hiện</span><strong>Tổ 2</strong></div><div class="asgn-review-row"><span>Người nhận</span><strong>${selected.name}</strong></div><div class="asgn-review-row"><span>Hạn hoàn thành</span><strong class="mono">${order.due}</strong></div></div>
+       <div class="asgn-demo-note"><span>${icon('sync')}</span><div><strong>Chỉ là bản demo</strong>Xác nhận không gửi thông báo thật và không lưu dữ liệu sau khi tải lại.</div></div>
+       <button class="btn primary block asgn-cta" onclick="confirmAssignment()">Xác nhận phân công</button><button class="btn secondary block" style="margin-top:8px" onclick="goBack()">Sửa thông tin</button>`,{title:'Kiểm tra phân công'});
+   };
+   screens.assignmentDone=function(){
+     const selected=assignee();
+     return appShell(`<div class="flow-success"><div class="success-icon">${icon('check')}</div><div class="flow-success-title">Đã phân công</div><div class="card-sub">${order.id} · ${order.work} · ${order.plot}</div></div>
+       <div class="card" style="margin-top:14px"><div class="row between"><div><div class="tiny muted">NGƯỜI THỰC HIỆN</div><div class="card-title" style="margin-top:4px">${selected?selected.name:'Chưa chọn'}</div><div class="card-sub">Tổ 2 · Hạn ${order.due}</div></div>${pill('Demo cục bộ','info')}</div></div>
+       <div class="asgn-demo-note"><span>${icon('sync')}</span><div><strong>Không có thay đổi thật</strong>Prototype không lưu lệnh và không gửi thông báo.</div></div>
+       <button class="btn primary block asgn-cta" onclick="goRoot('today')">Về Trang chính</button>`,{title:'Đã phân công'});
+   };
+ })();
+ </script>
+ <script type="application/json" id="vb-role-manifest">{"role": "leader", "sector": "Trồng trọt", "label": "Tổ trưởng", "baseline": "AgriOS v26.57", "sourceSha256": "47454dc1f81464355fff8644c485f6a9eddecf7d07d04daef59c2079a5ffff50", "baselineCount": 39, "baselineScreens": ["splash", "login", "today", "myTasks", "taskDetail", "plots", "plotDetail", "diaryList", "diaryDetail", "diaryCreate", "harvestList", "harvestCreate", "weighing", "notifications", "sync", "attendance", "account", "diarySaved", "notificationDetail", "syncResult", "help", "helpDetail", "logoutConfirm", "photoCapture", "weighEntry", "harvestHandoff", "harvestQr", "tenantSetup", "plotMap", "allFunctions", "diaryHistory", "weighOpenEdit", "attendanceScan", "harvestOrders", "productivity", "materials", "materialReturn", "isolationBlock", "todayTaskDetail"], "demoRouteCount": 6, "policy": "PO prototype/demo, browser-only"}</script>
 <script data-vb-module="30-role-specific-package">
 /* VBDAgri demo / single HTML / accessible route registry by role. */
 (function(){
-const ROLE="leader",TITLE="Tổ trưởng",ROUTES=Object.freeze(["splash", "login", "today", "myTasks", "taskDetail", "plots", "plotDetail", "diaryList", "diaryDetail", "diaryCreate", "harvestList", "harvestCreate", "weighing", "notifications", "sync", "attendance", "account", "diarySaved", "notificationDetail", "syncResult", "help", "helpDetail", "logoutConfirm", "photoCapture", "weighEntry", "harvestHandoff", "harvestQr", "tenantSetup", "plotMap", "allFunctions", "diaryHistory", "weighOpenEdit", "attendanceScan", "harvestOrders", "productivity", "materials", "materialReturn", "isolationBlock", "todayTaskDetail","diarySupplement","plotFilter"]);
+const ROLE="leader",TITLE="Tổ trưởng",ROUTES=Object.freeze(["splash", "login", "today", "assignment", "assignmentReview", "assignmentDone", "myTasks", "taskDetail", "plots", "plotDetail", "diaryList", "diaryDetail", "diaryCreate", "harvestList", "harvestCreate", "weighing", "notifications", "sync", "attendance", "account", "diarySaved", "notificationDetail", "syncResult", "help", "helpDetail", "logoutConfirm", "photoCapture", "weighEntry", "harvestHandoff", "harvestQr", "tenantSetup", "plotMap", "allFunctions", "diaryHistory", "weighOpenEdit", "attendanceScan", "harvestOrders", "productivity", "materials", "materialReturn", "isolationBlock", "todayTaskDetail","diarySupplement","plotFilter"]);
 const ALLOWED=new Set([...ROUTES,'vbRoleScenarios','vbRoleScenarioDetail','vbRoleScenarioResult','aiChat']),PUBLIC=new Set(['splash','login','tenantSetup']);
 const roleLabel=TITLE;
 for(const id of Object.keys(screens))if(!ALLOWED.has(id))delete screens[id];

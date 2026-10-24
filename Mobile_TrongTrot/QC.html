@@ -11111,5 +11111,15 @@ body.prototype-page { min-height:100dvh; background:#EAF1EC; }
 @keyframes agAiDotPulse{0%,80%,100%{transform:scale(.8);opacity:.35}40%{transform:scale(1);opacity:1}}
 </style>
 
+<script id="m10-qc-demo-fixture">
+(function(){
+  const pending=cropMock.qcQueue().find(item=>item.qc.simulation_only&&item.qc.status==='WAITING_LAB'&&item.qc.moisture_pct==null&&item.qc.impurity_pct==null&&item.qc.temperature_c==null);
+  if(pending)cropMock.saveQcForm(pending.qc.id,{moisture:12.8,impurity:1.4,temperature:27,grade:pending.qc.grade||'A',notes:'Mẫu mô phỏng · lá xanh, độ đồng nhất tốt.'});
+  const renderQcForm=screens.qcForm;
+  screens.qcForm=function(){
+    return renderQcForm().replace('<div class="card"><div class="card-title mono">','<div class="banner info"><strong>DỮ LIỆU MÔ PHỎNG</strong>Chỉ tiêu mẫu để xem thử giao diện; không phải kết quả lấy mẫu thực tế.</div><div class="card"><div class="card-title mono">');
+  };
+})();
+</script>
 
 </body></html>

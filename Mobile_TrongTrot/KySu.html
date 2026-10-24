@@ -3169,7 +3169,7 @@ window.openNotification=openNotification; window.openHarvest=openHarvest; window
 let __pendingMotion = 'initial';
 let __splashRaf = 0;
 let __splashDoneTimer = 0;
-const __confirmScreens = new Set(['checkoutConfirm','logoutConfirm','assignmentReview','fieldPlanReview','diaryApproval','harvestReview','weighingReview']);
+const __confirmScreens = new Set(['checkoutConfirm','logoutConfirm','assignmentReview','fieldPlanReview','harvestReview','weighingReview']);
 const __successScreens = new Set(['checkinDone','taskCompleteDone','diarySaved','diaryApprovalResult','fieldIssueDone','assignmentDone','completionReviewResult','fieldPlanDone','harvestCreated','weighingDone','qualitySaved','syncResult','checkoutDone']);
 const __mapScreens = new Set(['taskLocation','taskMapFull','checkin','plots','plotDetail']);
 const __formScreens = new Set(['diaryCreate','fieldIssue','assignment','fieldPlanCreate','harvestCreate','weighing','quality']);
@@ -10856,17 +10856,22 @@ html,body,button,input,select,textarea{font-family:var(--font-ui)!important}
 
   /* Diary approval: required reject reason is visible and enforced in the prototype. */
   window.approveDiary=approveDiary=function(decision='approved'){
-    if(decision==='returned'){
-      const h=root55();
-      const ta=h?.querySelector('.mobile-content textarea[placeholder*="Bắt buộc"], .mobile-content textarea');
-      if(ta&&!ta.value.trim()){
-        ta.classList.add('ag55-field-invalid');
-        let msg=ta.parentElement?.querySelector('.ag55-validation');
-        if(!msg){msg=document.createElement('div');msg.className='ag55-validation';msg.textContent='Vui lòng nhập lý do trước khi từ chối.';ta.insertAdjacentElement('afterend',msg)}
-        ta.focus();return;
-      }
+    const h=root55();
+    const selected=state.reviewEventId||cropMock.pendingApprovals(state.role)[0]?.id;
+    const ta=h?.querySelector('#m02-approval-reason');
+    const reason=ta?.value||'';
+    if(decision==='returned'&&ta&&!reason.trim()){
+      ta.classList.add('ag55-field-invalid');
+      let msg=ta.parentElement?.querySelector('.ag55-validation');
+      if(!msg){msg=document.createElement('div');msg.className='ag55-validation';msg.textContent='Vui lòng nhập lý do trước khi từ chối.';ta.insertAdjacentElement('afterend',msg)}
+      ta.focus();return;
     }
-    state.approvalDecision=decision;go('diaryApprovalResult');
+    const result=cropMock.reviewJournal(selected,state.role,decision,reason);
+    if(!result.ok){window.alert(result.error);return;}
+    state.approvalDecision=decision;
+    state.reviewEventId=null;
+    state.m02ReviewReturnOpen=false;
+    go('diaryApprovalResult');
   };
 
   /* M04 material return: CTA ends in a concise success state. */
@@ -11502,4 +11507,57 @@ body.prototype-page { min-height:100dvh; background:#EAF1EC; }
 </style>
 
 
+<style id="m02-review-redesign">
+.m02r-screen{display:grid;gap:10px;min-width:0}
+.m02r-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:13px;background:var(--bg-surface)}
+.m02r-summary-main{display:flex;align-items:baseline;gap:6px}.m02r-summary-main strong{color:var(--primary);font-size:21px;font-variant-numeric:tabular-nums}.m02r-summary-main span{color:var(--text-secondary);font-size:11px}
+.m02r-step{padding:6px 9px;border-radius:9px;background:var(--primary-tint);color:var(--primary);font-size:10px;font-weight:700;text-align:right}.m02r-step small{display:block;margin-top:2px;color:var(--text-muted);font-size:9px;font-weight:600}
+.m02r-queue-head{display:flex;align-items:end;justify-content:space-between;gap:8px}.m02r-queue-title{font-size:12px;font-weight:700}.m02r-queue-hint{margin-top:2px;color:var(--text-muted);font-size:10px}.m02r-queue-count{color:var(--text-muted);font:600 10px "JetBrains Mono",monospace}
+.m02r-queue{display:flex;gap:7px;overflow-x:auto;margin:0 -14px;padding:0 14px 3px;scroll-snap-type:x mandatory;scrollbar-width:none}.m02r-queue::-webkit-scrollbar{display:none}
+.m02r-queue-item{display:grid;align-content:center;gap:5px;flex:0 0 145px;min-width:0;min-height:58px;padding:8px 10px;border:1px solid var(--border);border-radius:11px;background:var(--bg-surface);color:var(--text);text-align:left;scroll-snap-align:start;transition:background .18s,border-color .18s,transform .18s}.m02r-queue-item:active{transform:scale(.98)}.m02r-queue-item[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-tint);box-shadow:0 0 0 1px color-mix(in srgb,var(--primary) 12%,transparent)}
+.m02r-queue-work{overflow:hidden;font-size:11px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}.m02r-queue-meta{color:var(--text-muted);font:500 9px "JetBrains Mono",monospace}
+.m02r-detail{display:grid;gap:9px;padding:11px 12px;border:1px solid var(--border);border-radius:14px;background:var(--bg-surface);box-shadow:var(--card-shadow-soft)}.m02r-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.m02r-detail-title{min-width:0}
+.m02r-eyebrow{color:var(--text-muted);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}.m02r-title{margin:3px 0 2px;font-size:15px;font-weight:700;line-height:1.25}.m02r-id{color:var(--text-muted);font:500 9px "JetBrains Mono",monospace}.m02r-status{flex:0 0 auto;padding:5px 7px;border-radius:8px;background:var(--warn-bg);color:var(--warn-fg);font-size:9px;font-weight:700}
+.m02r-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px}.m02r-meta-item{min-width:0;padding:7px 8px;border-radius:9px;background:var(--bg-page)}.m02r-meta-label{color:var(--text-muted);font-size:9px}.m02r-meta-value{margin-top:2px;overflow-wrap:anywhere;font-size:10px;font-weight:650;line-height:1.35}
+.m02r-note{padding:8px 9px;border-left:2px solid var(--border-strong);border-radius:0 8px 8px 0;background:var(--bg-page)}.m02r-note-label{color:var(--text-muted);font-size:9px;font-weight:700}.m02r-note-text{margin-top:3px;font-size:10px;line-height:1.45}
+.m02r-proof{display:flex;flex-wrap:wrap;gap:6px}.m02r-proof-item{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:8px;color:var(--text-secondary);font-size:9px;line-height:1.25}.m02r-proof-item strong{color:var(--text);font-weight:700}
+.m02r-effective{display:flex;align-items:flex-start;gap:7px;padding:8px 9px;border:1px solid #C6DCCB;border-radius:10px;background:var(--ok-bg);color:var(--ok-fg);font-size:9px;line-height:1.4}.m02r-effective-mark{display:grid;place-items:center;flex:0 0 16px;width:16px;height:16px;border-radius:50%;background:rgba(29,91,55,.12);font-size:10px;font-weight:800}
+.m02r-actions{display:grid;grid-template-columns:1fr 1.15fr;gap:8px}.m02r-actions .btn{min-height:42px;padding:0 8px;font-size:11px}.m02r-return-open{border:1px solid var(--border-strong)!important;background:var(--bg-surface)!important;color:var(--danger-fg)!important}
+.m02r-reason{display:grid;gap:7px;padding:10px;border:1px solid #E5BDB8;border-radius:12px;background:var(--danger-bg)}.m02r-reason label{font-size:11px;font-weight:700;color:var(--danger-fg)}.m02r-reason textarea{width:100%;min-height:62px;padding:8px 9px;border:1px solid var(--border-strong);border-radius:9px;background:var(--bg-surface);color:var(--text);font-size:11px;line-height:1.4;resize:vertical}.m02r-reason-actions{display:grid;grid-template-columns:1fr auto;gap:7px}.m02r-reason-actions .btn{min-height:38px;padding:0 10px;font-size:10px}
+.m02r-empty{display:grid;gap:9px;padding:17px 13px;border:1px solid var(--border);border-radius:14px;background:var(--bg-surface);text-align:center}.m02r-empty-mark{display:grid;place-items:center;width:34px;height:34px;margin:0 auto;border-radius:11px;background:var(--ok-bg);color:var(--ok-fg);font-size:17px;font-weight:800}.m02r-empty strong{font-size:13px}.m02r-empty p{margin:0;color:var(--text-muted);font-size:10px;line-height:1.45}
+@media(prefers-reduced-motion:reduce){.m02r-queue-item{transition:none}}
+</style>
+<script id="m02-review-redesign-js">
+(function(){
+  const workNames={cham_soc:'Chăm sóc tán',kiem_tra_sau_benh:'Kiểm tra sâu bệnh',phun_thuoc:'Phun thuốc'};
+  const esc=cropMock.escape;
+  const plotCode=id=>String(id||'').split('-').at(-1)||String(id||'');
+  const workName=event=>workNames[event.work_type]||event.note||'Sự kiện canh tác';
+  const dateLabel=value=>{const [date,time='']=String(value||'').split('T');return `${date.includes('-')?date.split('-').reverse().join('/'):date||'Chưa ghi ngày'}${time?` · ${time.slice(0,5)}`:''}`};
+  window.toggleReviewReturn=function(){state.m02ReviewReturnOpen=!state.m02ReviewReturnOpen;render();if(state.m02ReviewReturnOpen)requestAnimationFrame(()=>document.getElementById('m02-approval-reason')?.focus())};
+  window.selectApprovalEvent=function(id){state.reviewEventId=id;state.m02ReviewReturnOpen=false;render()};
+  screens.diaryApproval=function(){
+    const step=state.role==='manager'?2:1,pending=cropMock.pendingApprovals(state.role),chosen=pending.find(event=>event.id===state.reviewEventId)||pending[0];
+    if(!chosen)return appShell(`<div class="m02r-empty"><span class="m02r-empty-mark">✓</span><strong>Đã xử lý hết nhật ký</strong><p>Không còn sự kiện trong hàng duyệt bước ${step}. Các quyết định đã được ghi vào lịch sử của vai.</p><button class="btn primary block" onclick="goRoot('today')">Về Trang chính</button></div>`,{title:`Cần duyệt · Bước ${step}`,subtitle:state.role==='manager'?'Quản lý nông trường':'Kỹ sư nông nghiệp'});
+    state.reviewEventId=chosen.id;
+    const db=cropMock.read(),plot=db.plots.find(item=>item.id===chosen.plot_id),author=db.roles.find(item=>item.person_id===chosen.author_id),selectedIndex=pending.findIndex(event=>event.id===chosen.id);
+    const items=pending.map(event=>`<button type="button" class="m02r-queue-item" aria-pressed="${event.id===chosen.id}" aria-label="Mở nhật ký ${esc(event.id)}" onclick="selectApprovalEvent('${esc(event.id)}')"><span class="m02r-queue-work">${esc(workName(event))}</span><span class="m02r-queue-meta">${esc(plotCode(event.plot_id))} · ${esc(event.id)}</span></button>`).join('');
+    const gps=!chosen.gps?'Chưa ghi GPS':chosen.gps.synthetic?'Tọa độ mô phỏng · chưa xác minh':'Đã ghi tọa độ',photoCount=(chosen.photo_ids||[]).length;
+    const quantity=chosen.quantity==null?'':`<div class="m02r-meta-item"><div class="m02r-meta-label">Số lượng ghi</div><div class="m02r-meta-value">${esc(chosen.quantity)} ${esc(chosen.unit||'')}</div></div>`;
+    const content=`<div class="m02r-screen">
+      <div class="m02r-summary"><div class="m02r-summary-main"><strong>${pending.length}</strong><span>nhật ký chờ duyệt</span></div><div class="m02r-step">BƯỚC ${step}<small>${state.role==='manager'?'Quản lý':'Kỹ sư'}</small></div></div>
+      <div class="m02r-queue-head"><div><div class="m02r-queue-title">Hồ sơ trong hàng chờ</div><div class="m02r-queue-hint">Vuốt ngang để chọn nhật ký khác</div></div><span class="m02r-queue-count">${selectedIndex+1}/${pending.length}</span></div>
+      <div class="m02r-queue" role="group" aria-label="Nhật ký chờ duyệt">${items}</div>
+      <article class="m02r-detail"><div class="m02r-detail-head"><div class="m02r-detail-title"><div class="m02r-eyebrow">${esc(workName(chosen))}</div><h3 class="m02r-title">${esc(plot?.name||chosen.plot_id)}</h3><div class="m02r-id">${esc(chosen.id)} · Phiên bản ${Number(chosen.version||1)}</div></div><span class="m02r-status">Chờ duyệt</span></div>
+        <div class="m02r-meta"><div class="m02r-meta-item"><div class="m02r-meta-label">Thời điểm thực hiện</div><div class="m02r-meta-value">${esc(dateLabel(chosen.performed_at))}</div></div><div class="m02r-meta-item"><div class="m02r-meta-label">Người ghi</div><div class="m02r-meta-value">${esc(author?.name||chosen.author_id||'Chưa rõ')}</div></div>${quantity}</div>
+        <div class="m02r-note"><div class="m02r-note-label">GHI CHÚ HIỆN TRƯỜNG</div><div class="m02r-note-text">${esc(chosen.note||'Không có ghi chú đính kèm.')}</div></div>
+        <div class="m02r-proof"><span class="m02r-proof-item">Ảnh <strong>${photoCount?`${photoCount} tệp mẫu`:'Chưa có'}</strong></span><span class="m02r-proof-item">GPS <strong>${esc(gps)}</strong></span><span class="m02r-proof-item">Đồng bộ <strong>${chosen.sync_status==='SYNCED'?'Đã đồng bộ':chosen.sync_status==='PENDING_SYNC'?'Chờ đồng bộ':'Chưa rõ'}</strong></span></div>
+      </article>
+      <div class="m02r-effective"><span class="m02r-effective-mark">i</span><span>${chosen.is_effective?'Sự kiện đã có hiệu lực. Duyệt là bước kiểm soát thông tin, không kích hoạt lại công việc.':'Sự kiện chưa có hiệu lực theo dữ liệu mẫu.'} Nội dung và bằng chứng là dữ liệu mô phỏng.</span></div>
+      ${state.m02ReviewReturnOpen?`<section class="m02r-reason"><label for="m02-approval-reason">Lý do trả lại <span>(bắt buộc)</span></label><textarea id="m02-approval-reason" placeholder="Nêu rõ thông tin hoặc bằng chứng cần bổ sung"></textarea><div class="m02r-reason-actions"><button class="btn danger" onclick="approveDiary('returned')">Gửi yêu cầu bổ sung</button><button class="btn secondary" onclick="toggleReviewReturn()">Hủy</button></div></section>`:`<div class="m02r-actions"><button class="btn m02r-return-open" onclick="toggleReviewReturn()">Trả lại để bổ sung</button><button class="btn primary" onclick="approveDiary('approved')">Duyệt nhật ký</button></div>`}
+    </div>`;
+    return appShell(content,{title:`Cần duyệt · Bước ${step}`,subtitle:state.role==='manager'?'Quản lý nông trường':'Kỹ sư nông nghiệp'});
+  };
+})();
+</script>
 </body></html>

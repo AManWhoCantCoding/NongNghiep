@@ -11581,10 +11581,17 @@ screens.materialReturn=function(){
 (function(){
   'use strict';
   const STORE='VBDAgri:crop:worker:functional-demo:v1';
-  const EMPTY=()=>({version:1,diaries:[],returns:[],attendance:[],queue:[],receipts:[]});
+  const DEMO_QUEUE=[
+    {id:'DEMO-SYNC-01',idempotencyKey:'demo-sync-01',kind:'Nhật ký',ref:'DEMO-EV-01',title:'Mẫu · Nhật ký chăm sóc · CH-07',status:'Chờ gửi',at:'2026-10-25T06:40:00+07:00',attempts:0,demo:true},
+    {id:'DEMO-SYNC-02',idempotencyKey:'demo-sync-02',kind:'Ảnh',ref:'DEMO-PHOTO-02',title:'Mẫu · Ảnh hiện trường · CH-07',status:'Đang gửi',at:'2026-10-25T06:41:00+07:00',attempts:1,demo:true},
+    {id:'DEMO-SYNC-03',idempotencyKey:'demo-sync-03',kind:'Chấm công',ref:'DEMO-ATT-03',title:'Mẫu · Chấm công vào ca · CH-03',status:'Đã xử lý mô phỏng',at:'2026-10-25T06:35:00+07:00',ackAt:'2026-10-25T06:36:00+07:00',attempts:1,demo:true}
+  ];
+  const EMPTY=()=>({version:1,diaries:[],returns:[],attendance:[],queue:DEMO_QUEUE.map(item=>({...item})),receipts:[]});
   let data=EMPTY();
   let persistenceAvailable=true;
   try { const saved=JSON.parse(localStorage.getItem(STORE)||'null');if(saved&&saved.version===1)data={...EMPTY(),...saved}; }catch(_){persistenceAvailable=false}
+  if(!Array.isArray(data.queue))data.queue=[];
+  for(const item of DEMO_QUEUE)if(!data.queue.some(existing=>existing.id===item.id))data.queue.push({...item});
   const save=()=>{try{localStorage.setItem(STORE,JSON.stringify(data))}catch(_){persistenceAvailable=false; /* in-memory fallback for file:// origin */ }};
   const uid=()=>{try{return crypto.randomUUID()}catch(_){return 'local-'+Date.now()+'-'+Math.random().toString(36).slice(2)}};
   const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
